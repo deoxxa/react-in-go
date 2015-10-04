@@ -5,7 +5,7 @@ This is an experiment in rendering React JavaScript applications on the server,
 using go for the backend. It builds upon the [otto](https://github.com/robertkrimen/otto)
 JavaScript interpreter and my [ottoext](http://fknsrs.biz/p/ottoext) package to
 provide just enough of a JavaScript environment to support rendering a React
-application, provided that application uses very few browser APIs durnig its
+application, provided that application uses very few browser APIs during its
 critical render path.
 
 NOTE: Right now, this project relies on an unmerged patch to otto's interpreter,
