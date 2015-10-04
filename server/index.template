@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>react in go</title>
+  </head>
+  <body>
+    <div id="root">{{.html}}</div>
+
+    <script src="/bundle.browser.js"></script>
+  </body>
+</html>
