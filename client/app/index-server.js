@@ -6,7 +6,7 @@ import makeRoutes from './routes';
 
 const routes = makeRoutes();
 
-renderApplication = (url, res) => {
+renderApplication = (url, ctx, res) => {
   const location = createLocation(url);
 
   return match({routes, location}, (error, redirectLocation, renderProps) => {
@@ -22,6 +22,10 @@ renderApplication = (url, res) => {
       return res.notFound();
     }
 
-    return res.success(renderToString(<RoutingContext {...renderProps} />));
+    fetch('/api/v1/posts').then(r => r.json()).then(d => {
+      console.log(JSON.stringify(d));
+
+      return res.success(renderToString(<RoutingContext {...renderProps} />));
+    });
   });
 };

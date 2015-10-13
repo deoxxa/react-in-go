@@ -10,6 +10,7 @@ import (
 	"fknsrs.biz/p/ottoext/loop"
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
+	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/robertkrimen/otto"
 )
@@ -56,21 +57,31 @@ func main() {
 		panic(err)
 	}
 
-	n := negroni.New()
+	apiRouter := mux.NewRouter()
 
-	n.Use(negroni.NewRecovery())
-	n.Use(negronilogrus.NewMiddleware())
-	st := negroni.NewStatic(http.Dir("../client/public"))
-	st.IndexFile = "NOT_USED_I_HOPE"
-	n.Use(st)
+	apiRouter.Path("/api/v1/posts").Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		posts := `[
+			{"id":1,"title":"hello1 ","content":"hi there one!"},
+			{"id":2,"title":"hello 2","content":"hi there two!"}
+		]`
 
-	n.UseHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		if _, err := w.Write([]byte(posts)); err != nil {
+			panic(err)
+		}
+	})
+
+	m := mux.NewRouter()
+
+	m.PathPrefix("/api/v1").Handler(apiRouter)
+
+	m.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vmCopied := logDuration("copy vm")
 		vm := baseVM.Copy()
 		vmCopied()
 
 		l := loop.New(vm)
-		if err := fetch.Define(vm, l); err != nil {
+		if err := fetch.DefineWithHandler(vm, l, apiRouter); err != nil {
 			panic(err)
 		}
 
@@ -115,6 +126,15 @@ func main() {
 		}
 		jsFinished()
 	})
+
+	n := negroni.New()
+
+	n.Use(negroni.NewRecovery())
+	n.Use(negronilogrus.NewMiddleware())
+	st := negroni.NewStatic(http.Dir("../client/public"))
+	st.IndexFile = "NOT_USED_I_HOPE"
+	n.Use(st)
+	n.UseHandler(m)
 
 	logrus.Info("listening")
 	if err := http.ListenAndServe(":3000", n); err != nil {
