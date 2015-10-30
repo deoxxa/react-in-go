@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 
+	"github.com/MathieuTurcotte/sourcemap"
 	"github.com/robertkrimen/otto/parser"
 )
 
@@ -22,20 +23,24 @@ type Script struct {
 	src      string
 }
 
+func (self *Otto) Compile(filename string, src interface{}) (*Script, error) {
+	return self.CompileWithSourceMap(filename, src, nil)
+}
+
 // Compile will parse the given source and return a Script value or nil and
 // an error if there was a problem during compilation.
 //
 //      script, err := vm.Compile("", `var abc; if (!abc) abc = 0; abc += 2; abc;`)
 //      vm.Run(script)
 //
-func (self *Otto) Compile(filename string, src interface{}) (*Script, error) {
+func (self *Otto) CompileWithSourceMap(filename string, src interface{}, sm *sourcemap.SourceMap) (*Script, error) {
 	{
 		src, err := parser.ReadSource(filename, src)
 		if err != nil {
 			return nil, err
 		}
 
-		program, err := self.runtime.parse(filename, src)
+		program, err := self.runtime.parse(filename, src, sm)
 		if err != nil {
 			return nil, err
 		}

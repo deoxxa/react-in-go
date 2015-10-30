@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/MathieuTurcotte/sourcemap"
 	"github.com/robertkrimen/otto/ast"
 	"github.com/robertkrimen/otto/parser"
 )
@@ -327,8 +328,8 @@ func (runtime *_runtime) newGoArray(value reflect.Value) *_object {
 	return self
 }
 
-func (runtime *_runtime) parse(filename string, src interface{}) (*ast.Program, error) {
-	return parser.ParseFile(nil, filename, src, 0)
+func (runtime *_runtime) parse(filename string, src interface{}, sm *sourcemap.SourceMap) (*ast.Program, error) {
+	return parser.ParseFileWithSourceMap(nil, filename, src, 0, sm)
 }
 
 func (runtime *_runtime) cmpl_parse(filename string, src interface{}) (*_nodeProgram, error) {
@@ -339,20 +340,20 @@ func (runtime *_runtime) cmpl_parse(filename string, src interface{}) (*_nodePro
 	return cmpl_parse(program), nil
 }
 
-func (self *_runtime) parseSource(src interface{}) (*_nodeProgram, *ast.Program, error) {
+func (self *_runtime) parseSource(src interface{}, sm *sourcemap.SourceMap) (*_nodeProgram, *ast.Program, error) {
 	switch src := src.(type) {
 	case *ast.Program:
 		return nil, src, nil
 	case *Script:
 		return src.program, nil, nil
 	}
-	program, err := self.parse("", src)
+	program, err := self.parse("", src, sm)
 	return nil, program, err
 }
 
-func (self *_runtime) cmpl_run(src interface{}) (Value, error) {
+func (self *_runtime) cmpl_run(src interface{}, sm *sourcemap.SourceMap) (Value, error) {
 	result := Value{}
-	cmpl_program, program, err := self.parseSource(src)
+	cmpl_program, program, err := self.parseSource(src, sm)
 	if err != nil {
 		return result, err
 	}
@@ -388,8 +389,8 @@ func (self *_runtime) parseThrow(err error) {
 	panic(self.panicSyntaxError(err.Error()))
 }
 
-func (self *_runtime) parseOrThrow(source string) *ast.Program {
-	program, err := self.parse("", source)
+func (self *_runtime) parseOrThrow(source string, sm *sourcemap.SourceMap) *ast.Program {
+	program, err := self.parse("", source, sm)
 	self.parseThrow(err) // Will panic/throw appropriately
 	return program
 }

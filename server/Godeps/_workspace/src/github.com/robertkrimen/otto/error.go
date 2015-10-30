@@ -3,7 +3,6 @@ package otto
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/robertkrimen/otto/file"
 )
@@ -48,8 +47,10 @@ func (fr _frame) location() string {
 	if fr.file == nil {
 		return "<unknown>"
 	}
-	path := fr.file.Name()
-	line, column := _position(fr.file, fr.offset)
+
+	p := fr.file.Position(file.Idx(fr.offset))
+
+	path, line, column := p.Filename, p.Line, p.Column
 
 	if path == "" {
 		path = "<anonymous>"
@@ -62,30 +63,6 @@ func (fr _frame) location() string {
 	}
 
 	return str
-}
-
-func _position(file *file.File, offset int) (line, column int) {
-	{
-		offset := offset - file.Base()
-		if offset < 0 {
-			return -offset, -1
-		}
-
-		src := file.Source()
-		if offset >= len(src) {
-			return -offset, -len(src)
-		}
-		src = src[:offset]
-
-		line := 1 + strings.Count(src, "\n")
-		column := 0
-		if index := strings.LastIndex(src, "\n"); index >= 0 {
-			column = offset - index
-		} else {
-			column = 1 + len(src)
-		}
-		return line, column
-	}
 }
 
 // An Error represents a runtime error, e.g. a TypeError, a ReferenceError, etc.

@@ -227,6 +227,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MathieuTurcotte/sourcemap"
 	"github.com/robertkrimen/otto/registry"
 )
 
@@ -261,6 +262,12 @@ func (otto *Otto) clone() *Otto {
 	return self
 }
 
+func RunWithSourceMap(src interface{}, sm *sourcemap.SourceMap) (*Otto, Value, error) {
+	otto := New()
+	value, err := otto.RunWithSourceMap(src, sm) // This already does safety checking
+	return otto, value, err
+}
+
 // Run will allocate a new JavaScript runtime, run the given source
 // on the allocated runtime, and return the runtime, resulting value, and
 // error (if any).
@@ -272,9 +279,15 @@ func (otto *Otto) clone() *Otto {
 // src may also be a Program, but if the AST has been modified, then runtime behavior is undefined.
 //
 func Run(src interface{}) (*Otto, Value, error) {
-	otto := New()
-	value, err := otto.Run(src) // This already does safety checking
-	return otto, value, err
+	return RunWithSourceMap(src, nil)
+}
+
+func (self Otto) RunWithSourceMap(src interface{}, sm *sourcemap.SourceMap) (Value, error) {
+	value, err := self.runtime.cmpl_run(src, sm)
+	if !value.safe() {
+		value = Value{}
+	}
+	return value, err
 }
 
 // Run will run the given source (parsing it first if necessary), returning the resulting value and error (if any)
@@ -289,11 +302,7 @@ func Run(src interface{}) (*Otto, Value, error) {
 // src may also be a Program, but if the AST has been modified, then runtime behavior is undefined.
 //
 func (self Otto) Run(src interface{}) (Value, error) {
-	value, err := self.runtime.cmpl_run(src)
-	if !value.safe() {
-		value = Value{}
-	}
-	return value, err
+	return self.RunWithSourceMap(src, nil)
 }
 
 // Get the value of the top-level binding of the given name.
@@ -443,7 +452,7 @@ func (self Otto) Call(source string, this interface{}, argumentList ...interface
 // If there is an error (like the source does not result in an object), then
 // nil and an error is returned.
 func (self Otto) Object(source string) (*Object, error) {
-	value, err := self.runtime.cmpl_run(source)
+	value, err := self.runtime.cmpl_run(source, nil)
 	if err != nil {
 		return nil, err
 	}

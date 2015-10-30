@@ -39,6 +39,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/MathieuTurcotte/sourcemap"
 	"github.com/robertkrimen/otto/ast"
 	"github.com/robertkrimen/otto/file"
 	"github.com/robertkrimen/otto/token"
@@ -52,10 +53,9 @@ const (
 )
 
 type _parser struct {
-	filename string
-	str      string
-	length   int
-	base     int
+	str    string
+	length int
+	base   int
 
 	chr       rune // The current character
 	chrOffset int  // The offset of current character
@@ -82,18 +82,22 @@ type _parser struct {
 	file *file.File
 }
 
-func _newParser(filename, src string, base int) *_parser {
+func _newParser(filename, src string, base int, sm *sourcemap.SourceMap) *_parser {
 	return &_parser{
 		chr:    ' ', // This is set so we can start scanning by skipping whitespace
 		str:    src,
 		length: len(src),
 		base:   base,
-		file:   file.NewFile(filename, src, base),
+		file:   file.NewFileWithSourceMap(filename, src, base, sm),
 	}
 }
 
+func newParserWithSourceMap(filename, src string, sm *sourcemap.SourceMap) *_parser {
+	return _newParser(filename, src, 1, sm)
+}
+
 func newParser(filename, src string) *_parser {
-	return _newParser(filename, src, 1)
+	return newParserWithSourceMap(filename, src, nil)
 }
 
 func ReadSource(filename string, src interface{}) ([]byte, error) {
@@ -119,6 +123,25 @@ func ReadSource(filename string, src interface{}) ([]byte, error) {
 	return ioutil.ReadFile(filename)
 }
 
+func ParseFileWithSourceMap(fileSet *file.FileSet, filename string, src interface{}, mode Mode, sm *sourcemap.SourceMap) (*ast.Program, error) {
+	str, err := ReadSource(filename, src)
+	if err != nil {
+		return nil, err
+	}
+	{
+		str := string(str)
+
+		base := 1
+		if fileSet != nil {
+			base = fileSet.AddFile(filename, str)
+		}
+
+		parser := _newParser(filename, str, base, sm)
+		parser.mode = mode
+		return parser.parse()
+	}
+}
+
 // ParseFile parses the source code of a single JavaScript/ECMAScript source file and returns
 // the corresponding ast.Program node.
 //
@@ -133,22 +156,7 @@ func ReadSource(filename string, src interface{}) ([]byte, error) {
 //      program, err := parser.ParseFile(nil, "", `if (abc > 1) {}`, 0)
 //
 func ParseFile(fileSet *file.FileSet, filename string, src interface{}, mode Mode) (*ast.Program, error) {
-	str, err := ReadSource(filename, src)
-	if err != nil {
-		return nil, err
-	}
-	{
-		str := string(str)
-
-		base := 1
-		if fileSet != nil {
-			base = fileSet.AddFile(filename, str)
-		}
-
-		parser := _newParser(filename, str, base)
-		parser.mode = mode
-		return parser.parse()
-	}
+	return ParseFileWithSourceMap(fileSet, filename, src, mode, nil)
 }
 
 // ParseFunction parses a given parameter list and body as a function and returns the
@@ -160,7 +168,7 @@ func ParseFunction(parameterList, body string) (*ast.FunctionLiteral, error) {
 
 	src := "(function(" + parameterList + ") {\n" + body + "\n})"
 
-	parser := _newParser("", src, 1)
+	parser := _newParser("", src, 1, nil)
 	program, err := parser.parse()
 	if err != nil {
 		return nil, err
@@ -260,7 +268,7 @@ func (self *_parser) position(idx file.Idx) file.Position {
 	position := file.Position{}
 	offset := int(idx) - self.base
 	str := self.str[:offset]
-	position.Filename = self.filename
+	position.Filename = self.file.Name()
 	line, last := lineCount(str)
 	position.Line = 1 + line
 	if last >= 0 {
