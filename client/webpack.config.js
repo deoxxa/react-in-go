@@ -5,7 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 module.exports = {
-  devtool: 'eval',
+  devtool: 'source-map',
   entry: {
     browser: ['./app/index-browser.js'],
     server: ['./app/index-server.js'],
