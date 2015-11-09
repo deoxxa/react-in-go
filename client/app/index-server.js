@@ -23,8 +23,6 @@ renderApplication = (url, ctx, res) => {
     }
 
     fetch('/api/v1/posts').then(r => r.json()).then(d => {
-      console.log(JSON.stringify(d));
-
       return res.success(renderToString(<RoutingContext {...renderProps} />));
     });
   });
