@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"text/template"
@@ -8,6 +9,7 @@ import (
 
 	"fknsrs.biz/p/ottoext/fetch"
 	"fknsrs.biz/p/ottoext/loop"
+	"github.com/MathieuTurcotte/sourcemap"
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
@@ -32,15 +34,29 @@ func main() {
 
 	baseVM := otto.New()
 
+	smRead := logDuration("read sourcemap")
+	smData, err := ioutil.ReadFile("../client/public/bundle.server.js.map")
+	if err != nil {
+		panic(err)
+	}
+	smRead()
+
+	smParse := logDuration("parse sourcemap")
+	sm, err := sourcemap.Read(bytes.NewReader(smData))
+	if err != nil {
+		panic(err)
+	}
+	smParse()
+
 	jsRead := logDuration("read javascript")
-	d, err := ioutil.ReadFile("../client/public/bundle.server.js")
+	jsData, err := ioutil.ReadFile("../client/public/bundle.server.js")
 	if err != nil {
 		panic(err)
 	}
 	jsRead()
 
 	jsCompiled := logDuration("compile javascript")
-	s, err := baseVM.Compile("bundle.js", string(d))
+	s, err := baseVM.CompileWithSourceMap("bundle.js", string(jsData), &sm)
 	if err != nil {
 		panic(err)
 	}
@@ -115,7 +131,7 @@ func main() {
 		}
 
 		jsRun := logDuration("run javascript")
-		if _, err := fn.Call(otto.UndefinedValue(), r.URL.String(), v); err != nil {
+		if _, err := fn.Call(otto.UndefinedValue(), r.URL.String(), otto.NullValue(), v); err != nil {
 			panic(err)
 		}
 		jsRun()
