@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"text/template"
 	"time"
 
@@ -75,16 +77,51 @@ func main() {
 
 	apiRouter := mux.NewRouter()
 
-	apiRouter.Path("/api/v1/posts").Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		posts := `[
-			{"id":1,"title":"hello1 ","content":"hi there one!"},
-			{"id":2,"title":"hello 2","content":"hi there two!"}
-		]`
+	var cats = []Cat{
+		Cat{Name: "fluffy", FavouriteFood: "marshmallows"},
+		Cat{Name: "beans", FavouriteFood: "legume"},
+		Cat{Name: "misty", FavouriteFood: "meat"},
+		Cat{Name: "sara", FavouriteFood: "fish"},
+	}
+
+	apiRouter.Path("/api/v1/cats").Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("search") == "" {
+			w.Header().Set("content-type", "application/json")
+			if err := json.NewEncoder(w).Encode(cats); err != nil {
+				panic(err)
+			}
+
+			return
+		}
+
+		var d []Cat
+		for _, c := range cats {
+			if strings.Contains(strings.ToLower(c.Name), strings.ToLower(r.URL.Query().Get("search"))) {
+				d = append(d, c)
+			}
+		}
 
 		w.Header().Set("content-type", "application/json")
-		if _, err := w.Write([]byte(posts)); err != nil {
+		if err := json.NewEncoder(w).Encode(d); err != nil {
 			panic(err)
 		}
+	})
+
+	apiRouter.Path("/api/v1/cats/{name}").Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+
+		for _, c := range cats {
+			if strings.ToLower(c.Name) == vars["name"] {
+				w.Header().Set("content-type", "application/json")
+				if err := json.NewEncoder(w).Encode(c); err != nil {
+					panic(err)
+				}
+
+				return
+			}
+		}
+
+		http.NotFound(w, r)
 	})
 
 	m := mux.NewRouter()
