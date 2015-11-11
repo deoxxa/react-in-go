@@ -27,7 +27,7 @@
 		},
 		{
 			"ImportPath": "github.com/MathieuTurcotte/sourcemap",
-			"Rev": "84b82b675972380c5f863236e93bd30049066aa3"
+			"Rev": "6f22738fe38dae471636a634680361d1bbab00d7"
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
