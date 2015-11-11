@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -27,6 +28,14 @@ func logDuration(s string) func() {
 	return func() {
 		logrus.WithField("duration", time.Now().Sub(before).String()).Debugf("%s [after]", s)
 	}
+}
+
+func dumpDebugError(err error) string {
+	if oerr, ok := err.(*otto.Error); ok {
+		return oerr.String()
+	}
+
+	return ""
 }
 
 func main() {
@@ -60,12 +69,18 @@ func main() {
 	jsCompiled := logDuration("compile javascript")
 	s, err := baseVM.CompileWithSourceMap("bundle.js", string(jsData), &sm)
 	if err != nil {
+		if st := dumpDebugError(err); st != "" {
+			fmt.Println(st)
+		}
 		panic(err)
 	}
 	jsCompiled()
 
 	jsInitialised := logDuration("initialise javascript")
 	if _, err := baseVM.Run(s); err != nil {
+		if st := dumpDebugError(err); st != "" {
+			fmt.Println(st)
+		}
 		panic(err)
 	}
 	jsInitialised()
@@ -169,12 +184,18 @@ func main() {
 
 		jsRun := logDuration("run javascript")
 		if _, err := fn.Call(otto.UndefinedValue(), r.URL.String(), otto.NullValue(), v); err != nil {
+			if st := dumpDebugError(err); st != "" {
+				panic(fmt.Errorf("%s", st))
+			}
 			panic(err)
 		}
 		jsRun()
 
 		jsFinished := logDuration("wait for js")
 		if err := l.Run(); err != nil {
+			if st := dumpDebugError(err); st != "" {
+				panic(fmt.Errorf("%s", st))
+			}
 			panic(err)
 		}
 		jsFinished()
