@@ -66,6 +66,10 @@ func main() {
 	}
 	jsRead()
 
+	// lodash has a lookahead regex that we don't care about, and it makes otto
+	// unhappy. this is a hack to get rid of it.
+	jsData = bytes.Replace(jsData, []byte(`(?=`), []byte(`(`), -1)
+
 	jsCompiled := logDuration("compile javascript")
 	s, err := baseVM.CompileWithSourceMap("bundle.js", string(jsData), &sm)
 	if err != nil {
