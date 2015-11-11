@@ -38,6 +38,12 @@ func dumpDebugError(err error) string {
 	return ""
 }
 
+func vmCopier(baseVM *otto.Otto, c chan *otto.Otto) {
+	for {
+		c <- baseVM.Copy()
+	}
+}
+
 func main() {
 	logrus.StandardLogger().Level = logrus.DebugLevel
 
@@ -88,6 +94,9 @@ func main() {
 		panic(err)
 	}
 	jsInitialised()
+
+	vmChan := make(chan *otto.Otto)
+	go vmCopier(baseVM, vmChan)
 
 	tpl, err := template.ParseFiles("./index.template")
 	if err != nil {
@@ -149,7 +158,7 @@ func main() {
 
 	m.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vmCopied := logDuration("copy vm")
-		vm := baseVM.Copy()
+		vm := <-vmChan
 		vmCopied()
 
 		l := loop.New(vm)
