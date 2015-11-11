@@ -5,7 +5,7 @@
   </head>
   <body>
     <div id="root">{{.html}}</div>
-
+    <script>window.initialState = {{.initialState}}</script>
     <script src="/bundle.browser.js"></script>
   </body>
 </html>

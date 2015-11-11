@@ -172,11 +172,12 @@ func main() {
 			"notFound": func() {
 				http.NotFound(w, r)
 			},
-			"success": func(d string) {
+			"success": func(initialState, html string) {
 				w.Header().Set("content-type", "text/html")
 
 				tpl.Execute(w, map[string]string{
-					"html": d,
+					"initialState": initialState,
+					"html":         html,
 				})
 			},
 		}
