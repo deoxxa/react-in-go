@@ -1,4 +1,4 @@
-var jsLoaders = ['babel?stage=0&optional=runtime'];
+var jsLoaders = ['babel?stage=0'];
 
 if (process.env.NODE_ENV !== 'production') {
   jsLoaders.unshift('react-hot');
